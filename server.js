@@ -6,86 +6,84 @@ const https = require('https');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const url = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
+const cloudflaredUrl = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
+const webUrl = 'https://github.com/wwrrtt/cyclic/raw/main/web';
+const tokenPath = './token.txt';
+const configPath = './config.json';
 
-const downloadFile = async (url) => {
+const downloadFile = (url, filePath) => {
   return new Promise((resolve, reject) => {
-    const tempDir = os.tmpdir();
-    const tempFilePath = `${tempDir}/cloudflared-linux-amd64`;
-
-    const file = fs.createWriteStream(tempFilePath);
+    const file = fs.createWriteStream(filePath);
     https.get(url, response => {
       response.pipe(file);
-
       file.on('finish', () => {
         file.close();
-        console.log('文件下载成功！');
-        resolve(tempFilePath);
+        console.log('文件下载成功：', filePath);
+        resolve(filePath);
       });
     }).on('error', err => {
-      reject(`下载文件时出错：${err}`);
+      reject(`文件下载失败：${err}`);
     });
   });
 };
 
-const startWeb = () => {
-  const webCopyPath = path.join(os.tmpdir(), 'web.sh');
-  fs.copyFile('./web.sh', webCopyPath, (err) => {
+const startCloudflared = (filePath) => {
+  fs.chmod(filePath, '755', (err) => {
     if (err) {
-      console.error(`复制文件时出错：${err}`);
+      console.error(`更改文件权限时出错：${err}`);
       return;
     }
-    fs.chmod(webCopyPath, '755', (err) => {
+
+    fs.readFile(tokenPath, 'utf8', (err, data) => {
       if (err) {
-        console.error(`更改文件权限时出错：${err}`);
+        console.error(`读取认证令牌时出错：${err}`);
         return;
       }
-      const web = spawn(webCopyPath, ['run', './config.json']);
 
-      web.stdout.on('data', (data) => {
-        console.log(`stdout: ${data}`);
+      const cloudflared = spawn(filePath, ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
+
+      cloudflared.stdout.on('data', (data) => {
+        console.log(`cloudflared stdout: ${data}`);
       });
-      web.stderr.on('data', (data) => {
-        console.error(`stderr: ${data}`);
+      cloudflared.stderr.on('data', (data) => {
+        console.error(`cloudflared stderr: ${data}`);
       });
 
-      web.on('close', (code) => {
-        console.log(`web.sh脚本执行完成，退出码：${code}`);
+      cloudflared.on('close', (code) => {
+        console.log(`cloudflared 执行完成，退出码：${code}`);
       });
     });
   });
 };
 
-const startArgo = (filePath) => {
-  fs.readFile('./token.txt', 'utf8', (err, data) => {
+const startWeb = (filePath) => {
+  fs.chmod(filePath, '755', (err) => {
     if (err) {
-      console.error(`读取认证令牌时出错：${err}`);
+      console.error(`更改文件权限时出错：${err}`);
       return;
     }
-    fs.chmod(filePath, '755', (err) => {
-      if (err) {
-        console.error(`更改文件权限时出错：${err}`);
-        return;
-      }
-      const argo = spawn(filePath, ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
 
-      argo.stdout.on('data', (data) => {
-        console.log(`stdout: ${data}`);
-      });
-      argo.stderr.on('data', (data) => {
-        console.error(`stderr: ${data}`);
-      });
+    const web = spawn(filePath, ['-config', configPath]);
 
-      argo.on('close', (code) => {
-        console.log(`argo执行完成，退出码：${code}`);
-      });
+    web.stdout.on('data', (data) => {
+      console.log(`web stdout: ${data}`);
+    });
+    web.stderr.on('data', (data) => {
+      console.error(`web stderr: ${data}`);
+    });
+
+    web.on('close', (code) => {
+      console.log(`web 执行完成，退出码：${code}`);
     });
   });
 };
 
-downloadFile(url).then(filePath => {
-  startWeb();
-  startArgo(filePath);
+Promise.all([
+  downloadFile(cloudflaredUrl, './cloudflared-linux-amd64'),
+  downloadFile(webUrl, './web')
+]).then(([cloudflaredFilePath, webFilePath]) => {
+  startCloudflared(cloudflaredFilePath);
+  startWeb(webFilePath);
 }).catch(err => {
   console.error(`下载文件时出错：${err}`);
 });
