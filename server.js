@@ -7,6 +7,15 @@ app.get('/', (req, res) => {
   res.send('Hello World');
 });
 
+// 安装unzip
+exec('apt-get update && apt-get install -y unzip', (error, stdout, stderr) => {
+  if (error) {
+    console.error(`执行安装 unzip 命令时出错：${error}`);
+    return;
+  }
+  console.log(`安装 unzip 命令的输出：${stdout}`);
+});
+
 // 解压argo.zip文件
 const unzipArgo = () => {
   return new Promise((resolve, reject) => {
