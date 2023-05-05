@@ -20,7 +20,7 @@ exec('apt-get update && apt-get install -y unzip', (error, stdout, stderr) => {
 // 解压argo.zip文件
 const unzipArgo = () => {
   return new Promise((resolve, reject) => {
-    const unzip = spawn('unzip', ['argo.zip']);
+    const unzip = spawn('/usr/bin/unzip', ['argo.zip']);
 
     // 监听子进程的stdout和stderr输出
     unzip.stdout.on('data', (data) => {
