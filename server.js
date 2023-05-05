@@ -1,6 +1,7 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const app = express();
+const { exec } = require('child_process');
 
 // 定义路由，返回"Hello World"
 app.get('/', (req, res) => {
