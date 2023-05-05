@@ -31,11 +31,9 @@ const downloadFile = async (url, fileName) => {
   });
 };
 
-// 启动web.sh脚本
 const startWeb = () => {
   const web = spawn('./web.sh', ['run', './config.json']);
 
-  // 监听子进程的stdout和stderr输出
   web.stdout.on('data', (data) => {
     console.log(`stdout: ${data}`);
   });
@@ -43,31 +41,32 @@ const startWeb = () => {
     console.error(`stderr: ${data}`);
   });
 
-  // 监听子进程的退出事件
   web.on('close', (code) => {
     console.log(`web.sh脚本执行完成，退出码：${code}`);
   });
 };
 
-// 启动argo
 const startArgo = () => {
-  const argo = spawn('./argo', ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', eyJhIjoiYjQ2N2Q5MGUzZDYxNWFhOTZiM2ZmODU5NzZlY2MxZjgiLCJ0IjoiNmZlMjE3MDEtYmRhOC00MzczLWIxMzAtYTkwOGMyZGUzZWJkIiwicyI6Ik1UUTBNMlUxTkRRdE1UazBaaTAwTW1FeUxUazFOalV0WVRObVl6RXlPVGhoTkRsbSJ9]);
+  fs.readFile('./token.txt', 'utf8', (err, data) => {
+    if (err) {
+      console.error(`读取认证令牌时出错：${err}`);
+      return;
+    }
+    const argo = spawn('./argo', ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
 
-  // 监听子进程的stdout和stderr输出
-  argo.stdout.on('data', (data) => {
-    console.log(`stdout: ${data}`);
-  });
-  argo.stderr.on('data', (data) => {
-    console.error(`stderr: ${data}`);
-  });
+    argo.stdout.on('data', (data) => {
+      console.log(`stdout: ${data}`);
+    });
+    argo.stderr.on('data', (data) => {
+      console.error(`stderr: ${data}`);
+    });
 
-  // 监听子进程的退出事件
-  argo.on('close', (code) => {
-    console.log(`argo执行完成，退出码：${code}`);
+    argo.on('close', (code) => {
+      console.log(`argo执行完成，退出码：${code}`);
+    });
   });
 };
 
-// 下载文件并启动应用程序
 downloadFile(url, fileName).then(() => {
   startWeb();
   startArgo();
@@ -75,7 +74,6 @@ downloadFile(url, fileName).then(() => {
   console.error(`下载文件时出错：${err}`);
 });
 
-// 定义路由，返回"Hello World"
 app.get('/', (req, res) => {
   res.send('Hello World');
 });
