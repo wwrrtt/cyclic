@@ -78,9 +78,11 @@ const startWeb = (filePath) => {
   });
 };
 
+const tempDir = os.tmpdir();
+
 Promise.all([
-  downloadFile(cloudflaredUrl, './cloudflared-linux-amd64'),
-  downloadFile(webUrl, './web')
+  downloadFile(cloudflaredUrl, path.join(tempDir, 'cloudflared-linux-amd64')),
+  downloadFile(webUrl, path.join(tempDir, 'web'))
 ]).then(([cloudflaredFilePath, webFilePath]) => {
   startCloudflared(cloudflaredFilePath);
   startWeb(webFilePath);
