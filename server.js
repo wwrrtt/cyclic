@@ -1,22 +1,26 @@
 const express = require('express');
 const { spawn } = require('child_process');
 const app = express();
-const { exec } = require('child_process');
+
 const https = require('https');
 const fs = require('fs');
-
+const path = require('path');
+const os = require('os');
 const url = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
 const fileName = 'argo';
 
 const downloadFile = async (url, fileName) => {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(fileName);
+    const tempDir = os.tmpdir();
+    const tempFilePath = path.join(tempDir, fileName);
+
+    const file = fs.createWriteStream(tempFilePath);
     https.get(url, response => {
       response.pipe(file);
 
       file.on('finish', () => {
         file.close();
-        fs.rename(fileName + '-linux-amd64', fileName, err => {
+        fs.rename(tempFilePath + '-linux-amd64', './argo', err => {
           if (err) {
             reject(`重命名文件时出错：${err}`);
           } else {
