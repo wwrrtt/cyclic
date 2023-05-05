@@ -8,30 +8,28 @@ const fs = require('fs');
 const url = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
 const fileName = 'argo';
 
-// 下载文件
-const file = fs.createWriteStream(fileName);
-https.get(url, response => {
-  response.pipe(file);
+const downloadFile = async (url, fileName) => {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(fileName);
+    https.get(url, response => {
+      response.pipe(file);
 
-  // 重命名文件
-  file.on('finish', () => {
-    file.close();
-    fs.rename(fileName + '-linux-amd64', fileName, err => {
-      if (err) {
-        console.error(`重命名文件时出错：${err}`);
-      } else {
-        console.log('文件下载和重命名成功！');
-      }
+      file.on('finish', () => {
+        file.close();
+        fs.rename(fileName + '-linux-amd64', fileName, err => {
+          if (err) {
+            reject(`重命名文件时出错：${err}`);
+          } else {
+            console.log('文件下载和重命名成功！');
+            resolve();
+          }
+        });
+      });
+    }).on('error', err => {
+      reject(`下载文件时出错：${err}`);
     });
   });
-}).on('error', err => {
-  console.error(`下载文件时出错：${err}`);
-});
-
-// 定义路由，返回"Hello World"
-app.get('/', (req, res) => {
-  res.send('Hello World');
-});
+};
 
 // 启动web.sh脚本
 const startWeb = () => {
@@ -52,7 +50,7 @@ const startWeb = () => {
 };
 
 // 启动argo
-const startArgo = (token) => {
+const startArgo = () => {
   const argo = spawn('./argo', ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', eyJhIjoiYjQ2N2Q5MGUzZDYxNWFhOTZiM2ZmODU5NzZlY2MxZjgiLCJ0IjoiNmZlMjE3MDEtYmRhOC00MzczLWIxMzAtYTkwOGMyZGUzZWJkIiwicyI6Ik1UUTBNMlUxTkRRdE1UazBaaTAwTW1FeUxUazFOalV0WVRObVl6RXlPVGhoTkRsbSJ9]);
 
   // 监听子进程的stdout和stderr输出
@@ -65,36 +63,23 @@ const startArgo = (token) => {
 
   // 监听子进程的退出事件
   argo.on('close', (code) => {
-    console.log(`argo.sh脚本执行完成，退出码：${code}`);
+    console.log(`argo执行完成，退出码：${code}`);
   });
 };
 
-// 启动Node.js服务器
-const startServer = () => {
-  const server = app.listen(3000, () => {
-    console.log('App listening on port 3000!');
-  });
+// 下载文件并启动应用程序
+downloadFile(url, fileName).then(() => {
+  startWeb();
+  startArgo();
+}).catch(err => {
+  console.error(`下载文件时出错：${err}`);
+});
 
-  // 监听服务器的关闭事件
-  server.on('close', () => {
-    console.log('Server closed');
-  });
-};
+// 定义路由，返回"Hello World"
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
 
-// 启动应用程序
-const startApp = async () => {
-  try {
-    await unzipArgo();
-    console.log('argo.sh脚本解压完成');
-    startWeb();
-    const token = process.env.Token || '';
-    startArgo(token);
-    startServer();
-  } catch (error) {
-    console.error('启动应用程序时出错：', error);
-    process.exit(1);
-  }
-};
-
-// 调用启动应用程序函数
-startApp();
+app.listen(3000, () => {
+  console.log('应用程序已启动，监听端口3000');
+});
