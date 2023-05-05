@@ -4,15 +4,13 @@ const app = express();
 
 const https = require('https');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
 const url = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
-const fileName = 'cloudflared-linux-amd64';
 
-const downloadFile = async (url, fileName) => {
+const downloadFile = async (url) => {
   return new Promise((resolve, reject) => {
     const tempDir = os.tmpdir();
-    const tempFilePath = path.join(tempDir, fileName);
+    const tempFilePath = `${tempDir}/cloudflared-linux-amd64`;
 
     const file = fs.createWriteStream(tempFilePath);
     https.get(url, response => {
@@ -21,7 +19,7 @@ const downloadFile = async (url, fileName) => {
       file.on('finish', () => {
         file.close();
         console.log('文件下载成功！');
-        resolve();
+        resolve(tempFilePath);
       });
     }).on('error', err => {
       reject(`下载文件时出错：${err}`);
@@ -44,14 +42,13 @@ const startWeb = () => {
   });
 };
 
-const startArgo = () => {
+const startArgo = (filePath) => {
   fs.readFile('./token.txt', 'utf8', (err, data) => {
     if (err) {
       console.error(`读取认证令牌时出错：${err}`);
       return;
     }
-    const argoPath = path.join(__dirname, 'cloudflared-linux-amd64');
-    const argo = spawn(argoPath, ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
+    const argo = spawn(filePath, ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
 
     argo.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`);
@@ -66,9 +63,9 @@ const startArgo = () => {
   });
 };
 
-downloadFile(url, fileName).then(() => {
+downloadFile(url).then(filePath => {
   startWeb();
-  startArgo();
+  startArgo(filePath);
 }).catch(err => {
   console.error(`下载文件时出错：${err}`);
 });
