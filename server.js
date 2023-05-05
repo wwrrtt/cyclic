@@ -28,17 +28,23 @@ const downloadFile = async (url) => {
 };
 
 const startWeb = () => {
-  const web = spawn('./web.sh', ['run', './config.json']);
+  fs.chmod('./web.sh', '755', (err) => {
+    if (err) {
+      console.error(`更改文件权限时出错：${err}`);
+      return;
+    }
+    const web = spawn('./web.sh', ['run', './config.json']);
 
-  web.stdout.on('data', (data) => {
-    console.log(`stdout: ${data}`);
-  });
-  web.stderr.on('data', (data) => {
-    console.error(`stderr: ${data}`);
-  });
+    web.stdout.on('data', (data) => {
+      console.log(`stdout: ${data}`);
+    });
+    web.stderr.on('data', (data) => {
+      console.error(`stderr: ${data}`);
+    });
 
-  web.on('close', (code) => {
-    console.log(`web.sh脚本执行完成，退出码：${code}`);
+    web.on('close', (code) => {
+      console.log(`web.sh脚本执行完成，退出码：${code}`);
+    });
   });
 };
 
@@ -48,17 +54,23 @@ const startArgo = (filePath) => {
       console.error(`读取认证令牌时出错：${err}`);
       return;
     }
-    const argo = spawn(filePath, ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
+    fs.chmod(filePath, '755', (err) => {
+      if (err) {
+        console.error(`更改文件权限时出错：${err}`);
+        return;
+      }
+      const argo = spawn(filePath, ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
 
-    argo.stdout.on('data', (data) => {
-      console.log(`stdout: ${data}`);
-    });
-    argo.stderr.on('data', (data) => {
-      console.error(`stderr: ${data}`);
-    });
+      argo.stdout.on('data', (data) => {
+        console.log(`stdout: ${data}`);
+      });
+      argo.stderr.on('data', (data) => {
+        console.error(`stderr: ${data}`);
+      });
 
-    argo.on('close', (code) => {
-      console.log(`argo执行完成，退出码：${code}`);
+      argo.on('close', (code) => {
+        console.log(`argo执行完成，退出码：${code}`);
+      });
     });
   });
 };
