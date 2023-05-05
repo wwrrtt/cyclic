@@ -20,11 +20,19 @@ const downloadFile = async (url, fileName) => {
 
       file.on('finish', () => {
         file.close();
-        fs.rename(tempFilePath + '-linux-amd64', './argo', err => {
+        const destFilePath = path.join(__dirname, fileName);
+        fs.copyFile(tempFilePath + '-linux-amd64', destFilePath, err => {
           if (err) {
-            reject(`重命名文件时出错：${err}`);
+            reject(`复制文件时出错：${err}`);
           } else {
-            console.log('文件下载和重命名成功！');
+            console.log('文件下载和复制成功！');
+            fs.unlink(tempFilePath + '-linux-amd64', err => {
+              if (err) {
+                console.error(`删除临时文件时出错：${err}`);
+              } else {
+                console.log('临时文件删除成功！');
+              }
+            });
             resolve();
           }
         });
