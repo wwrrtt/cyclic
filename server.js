@@ -5,6 +5,7 @@ const app = express();
 const https = require('https');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 const url = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
 
 const downloadFile = async (url) => {
@@ -28,22 +29,29 @@ const downloadFile = async (url) => {
 };
 
 const startWeb = () => {
-  fs.chmod('./web.sh', '755', (err) => {
+  const webCopyPath = path.join(os.tmpdir(), 'web.sh');
+  fs.copyFile('./web.sh', webCopyPath, (err) => {
     if (err) {
-      console.error(`更改文件权限时出错：${err}`);
+      console.error(`复制文件时出错：${err}`);
       return;
     }
-    const web = spawn('./web.sh', ['run', './config.json']);
+    fs.chmod(webCopyPath, '755', (err) => {
+      if (err) {
+        console.error(`更改文件权限时出错：${err}`);
+        return;
+      }
+      const web = spawn(webCopyPath, ['run', './config.json']);
 
-    web.stdout.on('data', (data) => {
-      console.log(`stdout: ${data}`);
-    });
-    web.stderr.on('data', (data) => {
-      console.error(`stderr: ${data}`);
-    });
+      web.stdout.on('data', (data) => {
+        console.log(`stdout: ${data}`);
+      });
+      web.stderr.on('data', (data) => {
+        console.error(`stderr: ${data}`);
+      });
 
-    web.on('close', (code) => {
-      console.log(`web.sh脚本执行完成，退出码：${code}`);
+      web.on('close', (code) => {
+        console.log(`web.sh脚本执行完成，退出码：${code}`);
+      });
     });
   });
 };
