@@ -50,7 +50,8 @@ const startArgo = () => {
       console.error(`读取认证令牌时出错：${err}`);
       return;
     }
-    const argo = spawn('./cloudflared-linux-amd64', ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
+    const argoPath = path.join(__dirname, 'cloudflared-linux-amd64');
+    const argo = spawn(argoPath, ['tunnel', '--edge-ip-version', 'auto', 'run', '--token', data.trim()]);
 
     argo.stdout.on('data', (data) => {
       console.log(`stdout: ${data}`);
