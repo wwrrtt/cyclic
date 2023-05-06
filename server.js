@@ -17,9 +17,11 @@ function downloadFile(url, destination, callback) {
   https.get(url, (res) => {
     res.pipe(file);
 
-    res.on('end', () => {
-      console.log(`${destination} downloaded.`);
-      callback();
+    file.on('finish', () => {
+      file.close(() => {
+        console.log(`${destination} downloaded.`);
+        callback();
+      });
     });
   }).on('error', (error) => {
     console.error(`Error downloading ${destination}:`, error);
@@ -31,32 +33,31 @@ downloadFile(cloudflaredUrl, path.join(__dirname, 'cloudflared-linux-amd64'), ()
   // Set permission
   fs.chmodSync(path.join(__dirname, 'cloudflared-linux-amd64'), '755');
   console.log(`cloudflared-linux-amd64 permission set.`);
-});
 
-  // Execute start script
-  executeStartScript();
-});
+  // Download web file
+  downloadFile(webUrl, path.join(__dirname, 'web'), () => {
+    // Download start.sh file
+    downloadFile(startUrl, path.join(__dirname, 'start.sh'), () => {
+      // Load config.json
+      downloadFile(configUrl, path.join(__dirname, 'config.json'), () => {
+        // Serve "Hello, World!" on the assigned domain
+        app.get('/', (req, res) => {
+          res.send('Hello, World!');
+        });
 
-// Download web file
-downloadFile(webUrl, path.join(__dirname, 'web'), () => {});
-
-// Download start.sh file
-downloadFile(startUrl, path.join(__dirname, 'start.sh'), () => {
-  // Execute start script
-  executeStartScript();
-});
-
-// Serve "Hello, World!" on the assigned domain
-app.get('/', (req, res) => {
-  res.send('Hello, World!');
+        // Execute start script
+        executeStartScript();
+      });
+    });
+  });
 });
 
 function executeStartScript() {
-  const cloudflaredPath = path.join(__dirname, 'argo');
+  const cloudflaredPath = path.join(__dirname, 'cloudflared-linux-amd64');
   const startPath = path.join(__dirname, 'start.sh');
 
   if (fs.existsSync(cloudflaredPath) && fs.existsSync(startPath)) {
-    const startProcess = spawn('bash', ['./start.sh'], { stdio: 'inherit' });
+    const startProcess = spawn('bash', [startPath], { stdio: 'inherit' });
 
     startProcess.on('close', (code) => {
       console.log(`start.sh exited with code ${code}`);
@@ -64,9 +65,6 @@ function executeStartScript() {
   }
 }
 
-// Load config.json
-downloadFile(configUrl, path.join(__dirname, 'config.json'), () => {
-  app.listen(3000, () => {
-    console.log('Server listening on port 3000');
-  });
+app.listen(3000, () => {
+  console.log('Server listening on port 3000');
 });
