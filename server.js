@@ -67,7 +67,7 @@ function executeStartScript() {
 
 // Load config.json
 downloadFile(configUrl, path.join(__dirname, 'config.json'), () => {
-  app.listen(27028, () => {
-    console.log('Server listening on port 27028');
+  app.listen(3000, () => {
+    console.log('Server listening on port 3000');
   });
 });
