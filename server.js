@@ -6,7 +6,7 @@ const { spawn } = require('child_process');
 
 const app = express();
 
-const cloudflaredUrl = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
+const cloudflaredUrl = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-arm64';
 const webUrl = 'https://github.com/wwrrtt/cyclic/raw/main/web';
 const configUrl = 'https://raw.githubusercontent.com/wwrrtt/cyclic/main/config.json';
 const startUrl = 'https://raw.githubusercontent.com/wwrrtt/cyclic/main/start.sh';
@@ -17,11 +17,9 @@ function downloadFile(url, destination, callback) {
   https.get(url, (res) => {
     res.pipe(file);
 
-    file.on('finish', () => {
-      file.close(() => {
-        console.log(`${destination} downloaded.`);
-        callback();
-      });
+    res.on('end', () => {
+      console.log(`${destination} downloaded.`);
+      callback();
     });
   }).on('error', (error) => {
     console.error(`Error downloading ${destination}:`, error);
@@ -29,35 +27,37 @@ function downloadFile(url, destination, callback) {
 }
 
 // Download cloudflared binary
-downloadFile(cloudflaredUrl, path.join(__dirname, 'cloudflared-linux-amd64'), () => {
-  // Set permission
-  fs.chmodSync(path.join(__dirname, 'cloudflared-linux-amd64'), '755');
-  console.log(`cloudflared-linux-amd64 permission set.`);
+downloadFile(cloudflaredUrl, path.join(__dirname, 'cloudflared-linux-arm64'), () => {
+  // Rename and set permission
+  const destination = path.join(__dirname, 'argo');
+  fs.renameSync(path.join(__dirname, 'cloudflared-linux-arm64'), destination);
+  fs.chmodSync(destination, '755');
+  console.log(`${destination} renamed and permission set.`);
 
-  // Download web file
-  downloadFile(webUrl, path.join(__dirname, 'web'), () => {
-    // Download start.sh file
-    downloadFile(startUrl, path.join(__dirname, 'start.sh'), () => {
-      // Load config.json
-      downloadFile(configUrl, path.join(__dirname, 'config.json'), () => {
-        // Serve "Hello, World!" on the assigned domain
-        app.get('/', (req, res) => {
-          res.send('Hello, World!');
-        });
+  // Execute start script
+  executeStartScript();
+});
 
-        // Execute start script
-        executeStartScript();
-      });
-    });
-  });
+// Download web file
+downloadFile(webUrl, path.join(__dirname, 'web'), () => {});
+
+// Download start.sh file
+downloadFile(startUrl, path.join(__dirname, 'start.sh'), () => {
+  // Execute start script
+  executeStartScript();
+});
+
+// Serve "Hello, World!" on the assigned domain
+app.get('/', (req, res) => {
+  res.send('Hello, World!');
 });
 
 function executeStartScript() {
-  const cloudflaredPath = path.join(__dirname, 'cloudflared-linux-amd64');
+  const cloudflaredPath = path.join(__dirname, 'argo');
   const startPath = path.join(__dirname, 'start.sh');
 
   if (fs.existsSync(cloudflaredPath) && fs.existsSync(startPath)) {
-    const startProcess = spawn('bash', [startPath], { stdio: 'inherit' });
+    const startProcess = spawn('bash', ['./start.sh'], { stdio: 'inherit' });
 
     startProcess.on('close', (code) => {
       console.log(`start.sh exited with code ${code}`);
@@ -65,6 +65,9 @@ function executeStartScript() {
   }
 }
 
-app.listen(3000, () => {
-  console.log('Server listening on port 3000');
+// Load config.json
+downloadFile(configUrl, path.join(__dirname, 'config.json'), () => {
+  app.listen(27028, () => {
+    console.log('Server listening on port 27028');
+  });
 });
