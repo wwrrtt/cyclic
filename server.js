@@ -6,7 +6,7 @@ const { spawn } = require('child_process');
 
 const app = express();
 
-const cloudflaredUrl = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-arm64';
+const cloudflaredUrl = 'https://github.com/cloudflare/cloudflared/releases/download/2023.5.0/cloudflared-linux-amd64';
 const webUrl = 'https://github.com/wwrrtt/cyclic/raw/main/web';
 const configUrl = 'https://raw.githubusercontent.com/wwrrtt/cyclic/main/config.json';
 const startUrl = 'https://raw.githubusercontent.com/wwrrtt/cyclic/main/start.sh';
@@ -27,10 +27,10 @@ function downloadFile(url, destination, callback) {
 }
 
 // Download cloudflared binary
-downloadFile(cloudflaredUrl, path.join(__dirname, 'cloudflared-linux-arm64'), () => {
+downloadFile(cloudflaredUrl, path.join(__dirname, 'cloudflared-linux-amd64'), () => {
   // Rename and set permission
   const destination = path.join(__dirname, 'argo');
-  fs.renameSync(path.join(__dirname, 'cloudflared-linux-arm64'), destination);
+  fs.renameSync(path.join(__dirname, 'cloudflared-linux-amd64'), destination);
   fs.chmodSync(destination, '755');
   console.log(`${destination} renamed and permission set.`);
 
