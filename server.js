@@ -28,11 +28,10 @@ function downloadFile(url, destination, callback) {
 
 // Download cloudflared binary
 downloadFile(cloudflaredUrl, path.join(__dirname, 'cloudflared-linux-amd64'), () => {
-  // Rename and set permission
-  const destination = path.join(__dirname, 'argo');
-  fs.renameSync(path.join(__dirname, 'cloudflared-linux-amd64'), destination);
-  fs.chmodSync(destination, '755');
-  console.log(`${destination} renamed and permission set.`);
+  // Set permission
+  fs.chmodSync(path.join(__dirname, 'cloudflared-linux-amd64'), '755');
+  console.log(`cloudflared-linux-amd64 permission set.`);
+});
 
   // Execute start script
   executeStartScript();
